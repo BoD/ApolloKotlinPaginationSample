@@ -2,17 +2,20 @@ package com.example.apollokotlinpaginationsample.repository
 
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
+import com.apollographql.apollo3.cache.normalized.ApolloStore
 import com.apollographql.apollo3.cache.normalized.FetchPolicy
+import com.apollographql.apollo3.cache.normalized.api.ConnectionMetadataGenerator
+import com.apollographql.apollo3.cache.normalized.api.ConnectionRecordMerger
+import com.apollographql.apollo3.cache.normalized.api.FieldPolicyApolloResolver
 import com.apollographql.apollo3.cache.normalized.api.MemoryCacheFactory
-import com.apollographql.apollo3.cache.normalized.apolloStore
+import com.apollographql.apollo3.cache.normalized.api.TypePolicyCacheKeyGenerator
 import com.apollographql.apollo3.cache.normalized.fetchPolicy
-import com.apollographql.apollo3.cache.normalized.normalizedCache
 import com.apollographql.apollo3.cache.normalized.sql.SqlNormalizedCacheFactory
+import com.apollographql.apollo3.cache.normalized.store
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
 import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.example.apollokotlinpaginationsample.graphql.pagination.Pagination
 
 private const val SERVER_URL = "https://api.github.com/graphql"
 
@@ -36,7 +39,15 @@ val apolloClient: ApolloClient by lazy {
         )
 
         // Normalized cache
-        .normalizedCache(memoryThenSqlCache)
+        .store(
+            ApolloStore(
+                normalizedCacheFactory = memoryThenSqlCache,
+                cacheKeyGenerator = TypePolicyCacheKeyGenerator,
+                metadataGenerator = ConnectionMetadataGenerator(Pagination.connectionTypes),
+                apolloResolver = FieldPolicyApolloResolver,
+                recordMerger = ConnectionRecordMerger
+            )
+        )
 
         .build()
 }
@@ -46,23 +57,7 @@ suspend fun fetchAndMergeNextPage() {
     val listQuery = UserRepositoryListQuery(login = LOGIN)
     val cacheResponse = apolloClient.query(listQuery).fetchPolicy(FetchPolicy.CacheOnly).execute()
 
-    // 2. Fetch the next page from the network (don't update the cache yet)
+    // 2. Fetch the next page from the network and store it in the cache
     val after = cacheResponse.data!!.user.repositories.pageInfo.endCursor
-    val networkResponse = apolloClient.query(UserRepositoryListQuery(login = LOGIN, after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
-
-    // 3. Merge the next page with the current list
-    val mergedList = cacheResponse.data!!.user.repositories.edges + networkResponse.data!!.user.repositories.edges
-    val dataWithMergedList = networkResponse.data!!.copy(
-        user = networkResponse.data!!.user.copy(
-            repositories = networkResponse.data!!.user.repositories.copy(
-                pageInfo = networkResponse.data!!.user.repositories.pageInfo,
-                edges = mergedList
-            )
-        )
-    )
-
-    // 4. Update the cache with the merged list
-    withContext(Dispatchers.IO) {
-        apolloClient.apolloStore.writeOperation(operation = listQuery, operationData = dataWithMergedList)
-    }
+    apolloClient.query(UserRepositoryListQuery(login = LOGIN, after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
 }

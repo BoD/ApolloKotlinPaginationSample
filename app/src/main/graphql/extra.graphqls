@@ -9,3 +9,5 @@ extend type RepositoryConnection @nonnull(fields: "edges")
 extend type RepositoryEdge @nonnull(fields: "node")
 
 extend type Repository @typePolicy(keyFields: "id")
+
+extend type User @typePolicy(connectionFields: "repositories")

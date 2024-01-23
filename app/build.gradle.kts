@@ -80,8 +80,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     implementation("com.apollographql.apollo3:apollo-runtime")
-    implementation("com.apollographql.apollo3:apollo-normalized-cache")
-    implementation("com.apollographql.apollo3:apollo-normalized-cache-sqlite")
+    implementation("com.apollographql.apollo3:apollo-normalized-cache-incubating")
+    implementation("com.apollographql.apollo3:apollo-normalized-cache-sqlite-incubating")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
