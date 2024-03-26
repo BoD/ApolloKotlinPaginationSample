@@ -51,12 +51,12 @@ suspend fun fetchAndMergeNextPage() {
     val networkResponse = apolloClient.query(UserRepositoryListQuery(login = LOGIN, after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
 
     // 3. Merge the next page with the current list
-    val mergedList = cacheResponse.data!!.user.repositories.edges + networkResponse.data!!.user.repositories.edges
+    val mergedList = cacheResponse.data!!.user.repositories.nodes!! + networkResponse.data!!.user.repositories.nodes!!
     val dataWithMergedList = networkResponse.data!!.copy(
         user = networkResponse.data!!.user.copy(
             repositories = networkResponse.data!!.user.repositories.copy(
                 pageInfo = networkResponse.data!!.user.repositories.pageInfo,
-                edges = mergedList
+                nodes = mergedList
             )
         )
     )

@@ -66,6 +66,8 @@ apollo {
             schemaFile.set(file("src/main/graphql/schema.graphqls"))
             headers.put("Authorization", "Bearer ${prop("githubOauthKey")}")
         }
+
+        plugin(project(":implement-has-nodes-plugin"))
     }
 }
 

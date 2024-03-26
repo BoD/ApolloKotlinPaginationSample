@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun RepositoryList(response: ApolloResponse<UserRepositoryListQuery.Data>) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(response.data!!.user.repositories.edges.map { it!!.node.repositoryFields }) {
+        items(response.data!!.user.repositories.nodes!!.map { it!!.repositoryFields }) {
             RepositoryItem(it)
         }
         item {

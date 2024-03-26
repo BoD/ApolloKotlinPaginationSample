@@ -3,13 +3,12 @@ query UserRepositoryListQuery($login: String!, $after: String) {
         repositories(first: 10, after: $after) {
             pageInfo {
                 hasNextPage
+                hasPreviousPage
+                startCursor
                 endCursor
             }
-            edges {
-                cursor
-                node {
-                    ...RepositoryFields
-                }
+            nodes {
+                ...RepositoryFields
             }
         }
     }

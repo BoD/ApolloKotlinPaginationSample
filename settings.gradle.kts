@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Apollo Kotlin Pagination Sample"
 include(":app")
+include(":implement-has-nodes-plugin")
