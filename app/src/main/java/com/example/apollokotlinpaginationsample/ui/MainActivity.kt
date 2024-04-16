@@ -4,27 +4,31 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.apollographql.apollo3.api.ApolloResponse
+import com.apollographql.apollo3.cache.normalized.FetchPolicy
+import com.apollographql.apollo3.cache.normalized.fetchPolicy
 import com.apollographql.apollo3.cache.normalized.watch
 import com.apollographql.apollo3.exception.CacheMissException
 import com.example.apollokotlinpaginationsample.R
@@ -34,6 +38,7 @@ import com.example.apollokotlinpaginationsample.repository.LOGIN
 import com.example.apollokotlinpaginationsample.repository.apolloClient
 import com.example.apollokotlinpaginationsample.repository.fetchAndMergeNextPage
 import kotlinx.coroutines.flow.filterNot
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +49,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val response: ApolloResponse<UserRepositoryListQuery.Data>? by responseFlow.collectAsState(initial = null)
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    RefreshBanner()
                     if (response == null) {
                         Text(text = "Loading...")
                     } else {
@@ -52,6 +58,26 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RefreshBanner() {
+    val coroutineScope = rememberCoroutineScope()
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Button(
+            modifier = Modifier.align(Alignment.Center),
+            onClick = {
+                coroutineScope.launch {
+                    // Re-fetching the 1st page from the network will discard all other pages from the cache
+                    apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+                        .fetchPolicy(FetchPolicy.NetworkOnly)
+                        .execute()
+                }
+            }
+        ) {
+            Text("Refresh")
         }
     }
 }
