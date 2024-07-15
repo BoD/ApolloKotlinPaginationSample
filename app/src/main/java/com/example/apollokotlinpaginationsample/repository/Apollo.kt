@@ -1,13 +1,13 @@
 package com.example.apollokotlinpaginationsample.repository
 
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.api.Optional
-import com.apollographql.apollo3.cache.normalized.FetchPolicy
-import com.apollographql.apollo3.cache.normalized.api.MemoryCacheFactory
-import com.apollographql.apollo3.cache.normalized.apolloStore
-import com.apollographql.apollo3.cache.normalized.fetchPolicy
-import com.apollographql.apollo3.cache.normalized.normalizedCache
-import com.apollographql.apollo3.cache.normalized.sql.SqlNormalizedCacheFactory
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
+import com.apollographql.apollo.cache.normalized.FetchPolicy
+import com.apollographql.apollo.cache.normalized.api.MemoryCacheFactory
+import com.apollographql.apollo.cache.normalized.apolloStore
+import com.apollographql.apollo.cache.normalized.fetchPolicy
+import com.apollographql.apollo.cache.normalized.normalizedCache
+import com.apollographql.apollo.cache.normalized.sql.SqlNormalizedCacheFactory
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
 import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
