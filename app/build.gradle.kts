@@ -3,7 +3,8 @@ fun prop(key: String) = project.findProperty(key).toString()
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.apollographql.apollo3").version("4.0.0-beta.5-SNAPSHOT")
+    id("com.apollographql.apollo").version("4.0.0-rc.1")
+    id("org.jetbrains.kotlin.plugin.compose").version("2.0.0")
 }
 
 android {
@@ -46,10 +47,6 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -70,25 +67,25 @@ apollo {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    implementation("com.apollographql.apollo3:apollo-runtime")
-    implementation("com.apollographql.apollo3:apollo-normalized-cache-incubating")
-    implementation("com.apollographql.apollo3:apollo-normalized-cache-sqlite-incubating")
+    implementation("com.apollographql.apollo:apollo-runtime")
+    implementation("com.apollographql.cache:normalized-cache-incubating:0.0.3-SNAPSHOT")
+    implementation("com.apollographql.cache:normalized-cache-sqlite-incubating:0.0.3-SNAPSHOT")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:5.0-SNAPSHOT")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

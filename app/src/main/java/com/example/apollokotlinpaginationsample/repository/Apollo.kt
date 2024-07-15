@@ -1,17 +1,17 @@
 package com.example.apollokotlinpaginationsample.repository
 
-import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.api.Optional
-import com.apollographql.apollo3.cache.normalized.ApolloStore
-import com.apollographql.apollo3.cache.normalized.FetchPolicy
-import com.apollographql.apollo3.cache.normalized.api.ConnectionMetadataGenerator
-import com.apollographql.apollo3.cache.normalized.api.ConnectionRecordMerger
-import com.apollographql.apollo3.cache.normalized.api.FieldPolicyApolloResolver
-import com.apollographql.apollo3.cache.normalized.api.MemoryCacheFactory
-import com.apollographql.apollo3.cache.normalized.api.TypePolicyCacheKeyGenerator
-import com.apollographql.apollo3.cache.normalized.fetchPolicy
-import com.apollographql.apollo3.cache.normalized.sql.SqlNormalizedCacheFactory
-import com.apollographql.apollo3.cache.normalized.store
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
+import com.apollographql.cache.normalized.ApolloStore
+import com.apollographql.cache.normalized.FetchPolicy
+import com.apollographql.cache.normalized.api.ConnectionMetadataGenerator
+import com.apollographql.cache.normalized.api.ConnectionRecordMerger
+import com.apollographql.cache.normalized.api.FieldPolicyCacheResolver
+import com.apollographql.cache.normalized.api.MemoryCacheFactory
+import com.apollographql.cache.normalized.api.TypePolicyCacheKeyGenerator
+import com.apollographql.cache.normalized.fetchPolicy
+import com.apollographql.cache.normalized.sql.SqlNormalizedCacheFactory
+import com.apollographql.cache.normalized.store
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
 import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
@@ -44,7 +44,7 @@ val apolloClient: ApolloClient by lazy {
                 normalizedCacheFactory = memoryThenSqlCache,
                 cacheKeyGenerator = TypePolicyCacheKeyGenerator,
                 metadataGenerator = ConnectionMetadataGenerator(Pagination.connectionTypes),
-                apolloResolver = FieldPolicyApolloResolver,
+                cacheResolver = FieldPolicyCacheResolver,
                 recordMerger = ConnectionRecordMerger
             )
         )
