@@ -107,15 +107,23 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
 class RepositoryPagingSource(
     private val coroutineScope: CoroutineScope,
 ) : PagingSource<String, UserRepositoryListQuery.Edge>() {
+    private var allItems: List<UserRepositoryListQuery.Edge>? = null
+
+    private suspend fun allItems(params: LoadParams<String>): List<UserRepositoryListQuery.Edge> {
+        if (allItems == null || params is LoadParams.Refresh) {
+            allItems = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+                .fetchPolicy(FetchPolicy.CacheOnly)
+                .execute()
+                .data
+                // Data will be null the first time (empty cache): treat it as an empty list
+                ?.user?.repositories?.edges.orEmpty().filterNotNull()
+        }
+        return allItems!!
+    }
+
     override suspend fun load(params: LoadParams<String>): LoadResult<String, UserRepositoryListQuery.Edge> {
         // Get all items from the cache, and slice them according to the params
-        val allItems = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
-            .fetchPolicy(FetchPolicy.CacheOnly)
-            .execute()
-            .data
-            // Data will be null the first time (empty cache): treat it as an empty list
-            ?.user?.repositories?.edges.orEmpty().filterNotNull()
-
+        val allItems = allItems(params)
         val indexOfCursor = allItems.indexOfFirst { it.cursor == params.key }
         val slice = if (indexOfCursor == -1) {
             allItems.take(params.loadSize)
