@@ -64,6 +64,11 @@ val apolloClient: ApolloClient by lazy {
         .build()
 }
 
+/**
+ * Fetches pages of repositories and stores them to the normalized cache.
+ *
+ * This is called when the PagingSource can't find the requested pages in the cache, and when a refresh is requested.
+ */
 class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.Edge>() {
     override suspend fun load(
         loadType: LoadType,
@@ -105,6 +110,12 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
     }
 }
 
+/**
+ * Returns pages of repositories from the normalized cache.
+ *
+ * This implementation caches the entire list of repositories in memory to avoid accessing the cache for each page,
+ * which optimizes for I/O at the expense of memory usage.
+ */
 class RepositoryPagingSource(
     private val coroutineScope: CoroutineScope,
 ) : PagingSource<String, UserRepositoryListQuery.Edge>() {
@@ -161,7 +172,7 @@ class RepositoryPagingSource(
     }
 
     override fun getRefreshKey(state: PagingState<String, UserRepositoryListQuery.Edge>): String? {
-        return state.anchorPosition?.let { state.closestItemToPosition(it - state.config.initialLoadSize / 2) }?.cursor
+        return state.anchorPosition?.let { state.closestItemToPosition((it - state.config.initialLoadSize / 2).coerceAtLeast(0)) }?.cursor
     }
 
     override val keyReuseSupported = true
