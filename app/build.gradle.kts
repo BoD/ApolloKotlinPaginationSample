@@ -80,6 +80,9 @@ dependencies {
     implementation("com.apollographql.cache:normalized-cache-incubating:0.0.3-SNAPSHOT")
     implementation("com.apollographql.cache:normalized-cache-sqlite-incubating:0.0.3-SNAPSHOT")
 
+    implementation("androidx.paging:paging-runtime-ktx:3.3.0")
+    implementation("androidx.paging:paging-compose:3.3.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 

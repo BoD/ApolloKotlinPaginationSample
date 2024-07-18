@@ -1,5 +1,12 @@
+@file:OptIn(ExperimentalPagingApi::class)
+
 package com.example.apollokotlinpaginationsample.repository
 
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.LoadType
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
+import androidx.paging.RemoteMediator
 import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.api.Optional
 import com.apollographql.cache.normalized.ApolloStore
@@ -12,10 +19,14 @@ import com.apollographql.cache.normalized.api.TypePolicyCacheKeyGenerator
 import com.apollographql.cache.normalized.fetchPolicy
 import com.apollographql.cache.normalized.sql.SqlNormalizedCacheFactory
 import com.apollographql.cache.normalized.store
+import com.apollographql.cache.normalized.watch
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
 import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.pagination.Pagination
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.launch
 
 private const val SERVER_URL = "https://api.github.com/graphql"
 
@@ -52,12 +63,97 @@ val apolloClient: ApolloClient by lazy {
         .build()
 }
 
-suspend fun fetchAndMergeNextPage() {
-    // 1. Get the current list from the cache
-    val listQuery = UserRepositoryListQuery(login = LOGIN)
-    val cacheResponse = apolloClient.query(listQuery).fetchPolicy(FetchPolicy.CacheOnly).execute()
+class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.Edge>() {
+    override suspend fun load(
+        loadType: LoadType,
+        state: PagingState<String, UserRepositoryListQuery.Edge>,
+    ): MediatorResult {
+        val lastItemCursor: String? = when (loadType) {
+            LoadType.REFRESH -> {
+                // Passing after=null fetches the first page
+                null
+            }
 
-    // 2. Fetch the next page from the network and store it in the cache
-    val after = cacheResponse.data!!.user.repositories.pageInfo.endCursor
-    apolloClient.query(UserRepositoryListQuery(login = LOGIN, after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
+            LoadType.PREPEND -> {
+                // Prepend is not supported
+                return MediatorResult.Success(endOfPaginationReached = true)
+            }
+
+            LoadType.APPEND -> {
+                val lastItem: UserRepositoryListQuery.Edge = state.lastItemOrNull()
+                    ?: // This will be null the first time, when the cache is empty
+                    return MediatorResult.Success(endOfPaginationReached = false)
+                lastItem.cursor
+            }
+        }
+
+        val loadSize = if (loadType == LoadType.REFRESH) state.config.initialLoadSize else state.config.pageSize
+        val response = apolloClient.query(
+            UserRepositoryListQuery(
+                login = LOGIN,
+                after = Optional.presentIfNotNull(lastItemCursor),
+                first = Optional.present(loadSize),
+            )
+        )
+            .fetchPolicy(FetchPolicy.NetworkOnly)
+            .execute()
+        if (response.data != null) {
+            return MediatorResult.Success(endOfPaginationReached = response.data!!.user.repositories.edges.size < loadSize)
+        }
+        return MediatorResult.Error(response.exception!!)
+    }
+}
+
+class RepositoryPagingSource(
+    private val coroutineScope: CoroutineScope,
+) : PagingSource<String, UserRepositoryListQuery.Edge>() {
+    override suspend fun load(params: LoadParams<String>): LoadResult<String, UserRepositoryListQuery.Edge> {
+        // Get all items from the cache, and slice them according to the params
+        val allItems = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+            .fetchPolicy(FetchPolicy.CacheOnly)
+            .execute()
+            .data
+            // Data will be null the first time (empty cache): treat it as an empty list
+            ?.user?.repositories?.edges.orEmpty().filterNotNull()
+
+        val indexOfCursor = allItems.indexOfFirst { it.cursor == params.key }
+        val slice = if (indexOfCursor == -1) {
+            allItems.take(params.loadSize)
+        } else {
+            when (params) {
+                is LoadParams.Refresh, is LoadParams.Append -> {
+                    allItems.drop(indexOfCursor + 1).take(params.loadSize)
+                }
+
+                is LoadParams.Prepend -> {
+                    allItems.take(indexOfCursor).takeLast(params.loadSize)
+                }
+            }
+        }
+
+        // Watch the query to know when to invalidate this source
+        coroutineScope.launch {
+            apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+                .fetchPolicy(FetchPolicy.CacheOnly)
+                .watch(null)
+                .take(1)
+                .collect {
+                    invalidate()
+                }
+        }
+
+        val prevKey = slice.firstOrNull()?.cursor
+        val nextKey = slice.lastOrNull()?.cursor
+        return LoadResult.Page(
+            data = slice,
+            prevKey = prevKey,
+            nextKey = nextKey,
+        )
+    }
+
+    override fun getRefreshKey(state: PagingState<String, UserRepositoryListQuery.Edge>): String? {
+        return state.anchorPosition?.let { state.closestItemToPosition(it - state.config.initialLoadSize / 2) }?.cursor
+    }
+
+    override val keyReuseSupported = true
 }

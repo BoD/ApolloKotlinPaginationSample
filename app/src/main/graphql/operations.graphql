@@ -1,6 +1,6 @@
-query UserRepositoryListQuery($login: String!, $after: String) {
+query UserRepositoryListQuery($login: String!, $first: Int = 15, $after: String) {
     user(login: $login) {
-        repositories(first: 10, after: $after) {
+        repositories(first: $first, after: $after) {
             pageInfo {
                 hasNextPage
                 endCursor

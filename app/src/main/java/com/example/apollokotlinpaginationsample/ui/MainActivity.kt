@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalPagingApi::class)
+
 package com.example.apollokotlinpaginationsample.ui
 
 import android.os.Bundle
@@ -10,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -18,44 +19,44 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.apollographql.apollo.api.ApolloResponse
-import com.apollographql.apollo.exception.CacheMissException
-import com.apollographql.cache.normalized.FetchPolicy
-import com.apollographql.cache.normalized.fetchPolicy
-import com.apollographql.cache.normalized.watch
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.LoadState
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.example.apollokotlinpaginationsample.R
 import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.fragment.RepositoryFields
-import com.example.apollokotlinpaginationsample.repository.LOGIN
-import com.example.apollokotlinpaginationsample.repository.apolloClient
-import com.example.apollokotlinpaginationsample.repository.fetchAndMergeNextPage
-import kotlinx.coroutines.flow.filterNot
-import kotlinx.coroutines.launch
+import com.example.apollokotlinpaginationsample.repository.RepositoryPagingSource
+import com.example.apollokotlinpaginationsample.repository.RepositoryRemoteMediator
+import kotlinx.coroutines.flow.Flow
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val responseFlow = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
-            .watch()
-            .filterNot { it.exception is CacheMissException }
+
+        val repositoryPagingData: Flow<PagingData<UserRepositoryListQuery.Edge>> = Pager(
+            config = PagingConfig(pageSize = 15, enablePlaceholders = false),
+            remoteMediator = RepositoryRemoteMediator(),
+            pagingSourceFactory = {
+                RepositoryPagingSource(lifecycleScope)
+            },
+        ).flow
+
         setContent {
-            val response: ApolloResponse<UserRepositoryListQuery.Data>? by responseFlow.collectAsState(initial = null)
+            val repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge> = repositoryPagingData.collectAsLazyPagingItems()
             MaterialTheme {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    RefreshBanner()
-                    if (response == null) {
-                        Text(text = "Loading...")
-                    } else {
-                        RepositoryList(response!!)
-                    }
+                    RefreshBanner(repositoryPagingItems)
+                    RepositoryList(repositoryPagingItems)
                 }
             }
         }
@@ -63,18 +64,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RefreshBanner() {
-    val coroutineScope = rememberCoroutineScope()
+private fun RefreshBanner(repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge>) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Button(
             modifier = Modifier.align(Alignment.Center),
             onClick = {
-                coroutineScope.launch {
-                    // Re-fetching the 1st page from the network will discard all other pages from the cache
-                    apolloClient.query(UserRepositoryListQuery(login = LOGIN))
-                        .fetchPolicy(FetchPolicy.NetworkOnly)
-                        .execute()
-                }
+                repositoryPagingItems.refresh()
             }
         ) {
             Text("Refresh")
@@ -83,17 +78,19 @@ private fun RefreshBanner() {
 }
 
 @Composable
-private fun RepositoryList(response: ApolloResponse<UserRepositoryListQuery.Data>) {
+private fun RepositoryList(repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge>) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(response.data!!.user.repositories.edges.map { it!!.node.repositoryFields }) {
-            RepositoryItem(it)
+        items(
+            count = repositoryPagingItems.itemCount,
+            key = repositoryPagingItems.itemKey { it.node.id },
+        ) { index ->
+            val edge: UserRepositoryListQuery.Edge = repositoryPagingItems[index]!!
+            RepositoryItem(edge.node.repositoryFields)
         }
-        item {
-            if (response.data!!.user.repositories.pageInfo.hasNextPage) {
+
+        if (repositoryPagingItems.loadState.append == LoadState.Loading) {
+            item {
                 LoadingItem()
-                LaunchedEffect(Unit) {
-                    fetchAndMergeNextPage()
-                }
             }
         }
     }
