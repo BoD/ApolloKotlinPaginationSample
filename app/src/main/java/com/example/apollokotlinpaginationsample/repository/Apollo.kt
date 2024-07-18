@@ -9,6 +9,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.api.Optional
+import com.apollographql.apollo.exception.ApolloGraphQLException
 import com.apollographql.cache.normalized.ApolloStore
 import com.apollographql.cache.normalized.FetchPolicy
 import com.apollographql.cache.normalized.api.ConnectionMetadataGenerator
@@ -100,7 +101,7 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
         if (response.data != null) {
             return MediatorResult.Success(endOfPaginationReached = response.data!!.user.repositories.edges.size < loadSize)
         }
-        return MediatorResult.Error(response.exception!!)
+        return MediatorResult.Error(response.exception ?: ApolloGraphQLException(response.errors!!.first()))
     }
 }
 
