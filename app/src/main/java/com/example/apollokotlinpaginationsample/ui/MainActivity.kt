@@ -32,9 +32,8 @@ import com.apollographql.cache.normalized.FetchPolicy
 import com.apollographql.cache.normalized.fetchPolicy
 import com.apollographql.cache.normalized.watch
 import com.example.apollokotlinpaginationsample.R
-import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
+import com.example.apollokotlinpaginationsample.graphql.RepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.fragment.RepositoryFields
-import com.example.apollokotlinpaginationsample.repository.LOGIN
 import com.example.apollokotlinpaginationsample.repository.apolloClient
 import com.example.apollokotlinpaginationsample.repository.fetchAndMergeNextPage
 import kotlinx.coroutines.flow.filterNot
@@ -43,11 +42,11 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val responseFlow = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+        val responseFlow = apolloClient.query(RepositoryListQuery())
             .watch()
             .filterNot { it.exception is CacheMissException }
         setContent {
-            val response: ApolloResponse<UserRepositoryListQuery.Data>? by responseFlow.collectAsState(initial = null)
+            val response: ApolloResponse<RepositoryListQuery.Data>? by responseFlow.collectAsState(initial = null)
             MaterialTheme {
                 Column(modifier = Modifier.fillMaxSize()) {
                     RefreshBanner()
@@ -71,7 +70,7 @@ private fun RefreshBanner() {
             onClick = {
                 coroutineScope.launch {
                     // Re-fetching the 1st page from the network will discard all other pages from the cache
-                    apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+                    apolloClient.query(RepositoryListQuery())
                         .fetchPolicy(FetchPolicy.NetworkOnly)
                         .execute()
                 }
@@ -83,13 +82,13 @@ private fun RefreshBanner() {
 }
 
 @Composable
-private fun RepositoryList(response: ApolloResponse<UserRepositoryListQuery.Data>) {
+private fun RepositoryList(response: ApolloResponse<RepositoryListQuery.Data>) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(response.data!!.user.repositories.edges.map { it!!.node.repositoryFields }) {
+        items(response.data!!.organization.repositories.edges.map { it!!.node.repositoryFields }) {
             RepositoryItem(it)
         }
         item {
-            if (response.data!!.user.repositories.pageInfo.hasNextPage) {
+            if (response.data!!.organization.repositories.pageInfo.hasNextPage) {
                 LoadingItem()
                 LaunchedEffect(Unit) {
                     fetchAndMergeNextPage()

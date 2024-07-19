@@ -14,15 +14,13 @@ import com.apollographql.cache.normalized.sql.SqlNormalizedCacheFactory
 import com.apollographql.cache.normalized.store
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
-import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
+import com.example.apollokotlinpaginationsample.graphql.RepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.pagination.Pagination
 
 private const val SERVER_URL = "https://api.github.com/graphql"
 
 private const val HEADER_AUTHORIZATION = "Authorization"
 private const val HEADER_AUTHORIZATION_BEARER = "Bearer"
-
-const val LOGIN = "bod"
 
 val apolloClient: ApolloClient by lazy {
     val memoryCache = MemoryCacheFactory(maxSizeBytes = 5 * 1024 * 1024)
@@ -54,10 +52,10 @@ val apolloClient: ApolloClient by lazy {
 
 suspend fun fetchAndMergeNextPage() {
     // 1. Get the current list from the cache
-    val listQuery = UserRepositoryListQuery(login = LOGIN)
+    val listQuery = RepositoryListQuery()
     val cacheResponse = apolloClient.query(listQuery).fetchPolicy(FetchPolicy.CacheOnly).execute()
 
     // 2. Fetch the next page from the network and store it in the cache
-    val after = cacheResponse.data!!.user.repositories.pageInfo.endCursor
-    apolloClient.query(UserRepositoryListQuery(login = LOGIN, after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
+    val after = cacheResponse.data!!.organization.repositories.pageInfo.endCursor
+    apolloClient.query(RepositoryListQuery(after = Optional.presentIfNotNull(after))).fetchPolicy(FetchPolicy.NetworkOnly).execute()
 }
