@@ -1,5 +1,5 @@
-query UserRepositoryListQuery($login: String!, $first: Int = 15, $after: String) {
-    user(login: $login) {
+query RepositoryListQuery($first: Int = 15, $after: String) {
+    organization(login: "github") {
         repositories(first: $first, after: $after) {
             pageInfo {
                 hasNextPage

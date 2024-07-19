@@ -33,7 +33,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.apollokotlinpaginationsample.R
-import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
+import com.example.apollokotlinpaginationsample.graphql.RepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.fragment.RepositoryFields
 import com.example.apollokotlinpaginationsample.repository.RepositoryPagingSource
 import com.example.apollokotlinpaginationsample.repository.RepositoryRemoteMediator
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val repositoryPagingData: Flow<PagingData<UserRepositoryListQuery.Edge>> = Pager(
+        val repositoryPagingData: Flow<PagingData<RepositoryListQuery.Edge>> = Pager(
             config = PagingConfig(pageSize = 15, enablePlaceholders = false),
             remoteMediator = RepositoryRemoteMediator(),
             pagingSourceFactory = {
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         ).flow
 
         setContent {
-            val repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge> = repositoryPagingData.collectAsLazyPagingItems()
+            val repositoryPagingItems: LazyPagingItems<RepositoryListQuery.Edge> = repositoryPagingData.collectAsLazyPagingItems()
             MaterialTheme {
                 Column(modifier = Modifier.fillMaxSize()) {
                     RefreshBanner(repositoryPagingItems)
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RefreshBanner(repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge>) {
+private fun RefreshBanner(repositoryPagingItems: LazyPagingItems<RepositoryListQuery.Edge>) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Button(
             modifier = Modifier.align(Alignment.Center),
@@ -78,13 +78,13 @@ private fun RefreshBanner(repositoryPagingItems: LazyPagingItems<UserRepositoryL
 }
 
 @Composable
-private fun RepositoryList(repositoryPagingItems: LazyPagingItems<UserRepositoryListQuery.Edge>) {
+private fun RepositoryList(repositoryPagingItems: LazyPagingItems<RepositoryListQuery.Edge>) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(
             count = repositoryPagingItems.itemCount,
             key = repositoryPagingItems.itemKey { it.node.id },
         ) { index ->
-            val edge: UserRepositoryListQuery.Edge = repositoryPagingItems[index]!!
+            val edge: RepositoryListQuery.Edge = repositoryPagingItems[index]!!
             RepositoryItem(edge.node.repositoryFields)
         }
 

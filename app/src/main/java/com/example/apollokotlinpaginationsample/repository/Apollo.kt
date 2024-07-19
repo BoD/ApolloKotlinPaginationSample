@@ -23,7 +23,7 @@ import com.apollographql.cache.normalized.store
 import com.apollographql.cache.normalized.watch
 import com.example.apollokotlinpaginationsample.Application
 import com.example.apollokotlinpaginationsample.BuildConfig
-import com.example.apollokotlinpaginationsample.graphql.UserRepositoryListQuery
+import com.example.apollokotlinpaginationsample.graphql.RepositoryListQuery
 import com.example.apollokotlinpaginationsample.graphql.pagination.Pagination
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.take
@@ -33,8 +33,6 @@ private const val SERVER_URL = "https://api.github.com/graphql"
 
 private const val HEADER_AUTHORIZATION = "Authorization"
 private const val HEADER_AUTHORIZATION_BEARER = "Bearer"
-
-const val LOGIN = "bod"
 
 val apolloClient: ApolloClient by lazy {
     val memoryCache = MemoryCacheFactory(maxSizeBytes = 5 * 1024 * 1024)
@@ -69,10 +67,10 @@ val apolloClient: ApolloClient by lazy {
  *
  * This is called when the PagingSource can't find the requested pages in the cache, and when a refresh is requested.
  */
-class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.Edge>() {
+class RepositoryRemoteMediator : RemoteMediator<String, RepositoryListQuery.Edge>() {
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<String, UserRepositoryListQuery.Edge>,
+        state: PagingState<String, RepositoryListQuery.Edge>,
     ): MediatorResult {
         val lastItemCursor: String? = when (loadType) {
             LoadType.REFRESH -> {
@@ -86,7 +84,7 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
             }
 
             LoadType.APPEND -> {
-                val lastItem: UserRepositoryListQuery.Edge = state.lastItemOrNull()
+                val lastItem: RepositoryListQuery.Edge = state.lastItemOrNull()
                     ?: // This will be null the first time, when the cache is empty
                     return MediatorResult.Success(endOfPaginationReached = false)
                 lastItem.cursor
@@ -95,8 +93,7 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
 
         val loadSize = if (loadType == LoadType.REFRESH) state.config.initialLoadSize else state.config.pageSize
         val response = apolloClient.query(
-            UserRepositoryListQuery(
-                login = LOGIN,
+            RepositoryListQuery(
                 after = Optional.presentIfNotNull(lastItemCursor),
                 first = Optional.present(loadSize),
             )
@@ -104,7 +101,7 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
             .fetchPolicy(FetchPolicy.NetworkOnly)
             .execute()
         if (response.data != null) {
-            return MediatorResult.Success(endOfPaginationReached = response.data!!.user.repositories.edges.size < loadSize)
+            return MediatorResult.Success(endOfPaginationReached = response.data!!.organization.repositories.edges.size < loadSize)
         }
         return MediatorResult.Error(response.exception ?: ApolloGraphQLException(response.errors!!.first()))
     }
@@ -118,22 +115,22 @@ class RepositoryRemoteMediator : RemoteMediator<String, UserRepositoryListQuery.
  */
 class RepositoryPagingSource(
     private val coroutineScope: CoroutineScope,
-) : PagingSource<String, UserRepositoryListQuery.Edge>() {
-    private var allItems: List<UserRepositoryListQuery.Edge>? = null
+) : PagingSource<String, RepositoryListQuery.Edge>() {
+    private var allItems: List<RepositoryListQuery.Edge>? = null
 
-    private suspend fun allItems(params: LoadParams<String>): List<UserRepositoryListQuery.Edge> {
+    private suspend fun allItems(params: LoadParams<String>): List<RepositoryListQuery.Edge> {
         if (allItems == null || params is LoadParams.Refresh) {
-            allItems = apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+            allItems = apolloClient.query(RepositoryListQuery())
                 .fetchPolicy(FetchPolicy.CacheOnly)
                 .execute()
                 .data
                 // Data will be null the first time (empty cache): treat it as an empty list
-                ?.user?.repositories?.edges.orEmpty().filterNotNull()
+                ?.organization?.repositories?.edges.orEmpty().filterNotNull()
         }
         return allItems!!
     }
 
-    override suspend fun load(params: LoadParams<String>): LoadResult<String, UserRepositoryListQuery.Edge> {
+    override suspend fun load(params: LoadParams<String>): LoadResult<String, RepositoryListQuery.Edge> {
         // Get all items from the cache, and slice them according to the params
         val allItems = allItems(params)
         val indexOfCursor = allItems.indexOfFirst { it.cursor == params.key }
@@ -153,7 +150,7 @@ class RepositoryPagingSource(
 
         // Watch the query to know when to invalidate this source
         coroutineScope.launch {
-            apolloClient.query(UserRepositoryListQuery(login = LOGIN))
+            apolloClient.query(RepositoryListQuery())
                 .fetchPolicy(FetchPolicy.CacheOnly)
                 .watch(null)
                 .take(1)
@@ -171,7 +168,7 @@ class RepositoryPagingSource(
         )
     }
 
-    override fun getRefreshKey(state: PagingState<String, UserRepositoryListQuery.Edge>): String? {
+    override fun getRefreshKey(state: PagingState<String, RepositoryListQuery.Edge>): String? {
         return state.anchorPosition?.let { state.closestItemToPosition((it - state.config.initialLoadSize / 2).coerceAtLeast(0)) }?.cursor
     }
 
