@@ -3,7 +3,7 @@ fun prop(key: String) = project.findProperty(key).toString()
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.apollographql.apollo").version("4.0.0-rc.1")
+    id("com.apollographql.apollo").version("4.0.0-rc.2")
     id("org.jetbrains.kotlin.plugin.compose").version("2.0.0")
 }
 
@@ -85,10 +85,4 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
-    testImplementation("junit:junit:5.0-SNAPSHOT")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

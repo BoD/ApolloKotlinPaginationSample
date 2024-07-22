@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.Flow
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val repositoryPagingData: Flow<PagingData<RepositoryListQuery.Edge>> = Pager(
             config = PagingConfig(pageSize = 15, enablePlaceholders = false),
             remoteMediator = RepositoryRemoteMediator(),
@@ -50,7 +49,6 @@ class MainActivity : ComponentActivity() {
                 RepositoryPagingSource(lifecycleScope)
             },
         ).flow
-
         setContent {
             val repositoryPagingItems: LazyPagingItems<RepositoryListQuery.Edge> = repositoryPagingData.collectAsLazyPagingItems()
             MaterialTheme {
